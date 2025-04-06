@@ -59,8 +59,10 @@ externalAccess:
   enabled: true
   service:
     type: LoadBalancer
+    loadBalancerClass: f5
     annotations: {}
-
+    ports:
+      smtp: 25
 ingress:
   enabled: false
   className: ""
