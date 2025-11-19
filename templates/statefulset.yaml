@@ -16,6 +16,9 @@ spec:
       labels:
         {{- include "stalwart-mail.selectorLabels" . | nindent 8 }}
       annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         checksum/scripts-configmap: {{ pick (include (print $.Template.BasePath "/scripts-configmap.yaml" ) . | fromYaml ) "data" | toYaml | sha256sum | quote }}
         secret/credential-secret: {{ pick (include (print $.Template.BasePath "/secret-credential.yaml" ) . | fromYaml ) "data" | toYaml | sha256sum | quote }}
     spec:
