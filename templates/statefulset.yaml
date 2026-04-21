@@ -1,34 +1,58 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "stalwart-mail.fullname" . }}
+  name: {{ include "stalwart.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    {{- include "stalwart-mail.labels" . | nindent 4 }}
+    {{- include "stalwart.labels" . | nindent 4 }}
 spec:
-  serviceName: {{ include "stalwart-mail.fullname" . }}-headless
+  serviceName: {{ include "stalwart.fullname" . }}-headless
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "stalwart-mail.selectorLabels" . | nindent 6 }}
+      {{- include "stalwart.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "stalwart-mail.selectorLabels" . | nindent 8 }}
+        {{- include "stalwart.selectorLabels" . | nindent 8 }}
       annotations:
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        checksum/scripts-configmap: {{ pick (include (print $.Template.BasePath "/scripts-configmap.yaml" ) . | fromYaml ) "data" | toYaml | sha256sum | quote }}
-        secret/credential-secret: {{ pick (include (print $.Template.BasePath "/secret-credential.yaml" ) . | fromYaml ) "data" | toYaml | sha256sum | quote }}
     spec:
-      serviceAccountName: {{ include "stalwart-mail.serviceAccountName" . }}
+      serviceAccountName: {{ include "stalwart.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: stalwart-mail
-          image: {{ include "stalwart-mail.common.image" (dict "image" .Values.image "global" .Values.global "chart" .Chart ) | quote }}
+        - name: stalwart
+          image: {{ include "stalwart.common.image" (dict "image" .Values.image "global" .Values.global "chart" .Chart ) | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - "--config"
+            - "/etc/stalwart/config.json"
+          env:
+            {{- if .Values.role }}
+            - name: STALWART_ROLE
+              value: {{ .Values.role | quote }}
+            {{- end }}
+            {{- if .Values.pushShard }}
+            - name: STALWART_PUSH_SHARD
+              value: {{ .Values.pushShard | quote }}
+            {{- end }}
+            {{- if .Values.recoveryMode.enabled }}
+            - name: STALWART_RECOVERY_MODE
+              value: "true"
+            - name: STALWART_RECOVERY_MODE_PORT
+              value: {{ .Values.recoveryMode.port | quote }}
+            - name: STALWART_RECOVERY_MODE_LOG_LEVEL
+              value: {{ .Values.recoveryMode.logLevel | quote }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ include "stalwart.fullname" . }}-env
           livenessProbe:
             httpGet:
               path: /healthz/live
@@ -42,25 +66,19 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
           ports:
-            - name: http
-              containerPort: 8080
-            - name: https
-              containerPort: 443
-            - name: smtp
-              containerPort: 25
-            - name: submission
-              containerPort: 587
-            - name: smtps
-              containerPort: 465
-            - name: imap
-              containerPort: 143
-            - name: imaps
-              containerPort: 993
-            - name: sieve
-              containerPort: 4190
+          {{- range $key, $val := $.Values.service.ports }}
+            - name: {{ $key }}
+              containerPort: {{ $val }}
+          {{- end }}
           volumeMounts:
-            - name: stalwart-volume
-              mountPath: {{ .Values.persistence.mountPath }}
+            - name: config
+              mountPath: /etc/stalwart/config.json
+              subPath: config.json
+              readOnly: true
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /var/lib/stalwart
+            {{- end }}
             {{- if .Values.tls.enabled }}
             - name: tls-secret
               mountPath: /secrets/tls
@@ -70,34 +88,6 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-        {{- if .Values.tls.enabled }}
-        - name: tls-reloader
-          image: {{ include "stalwart-mail.common.image" (dict "image" .Values.image "global" .Values.global "chart" .Chart ) | quote }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command:
-            - /bin/bash
-          args:
-            - "/opt/scripts/tls-reloader.sh"
-            - "/secrets/tls"
-            - "10"
-          env:
-            - name: STALWART_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "stalwart-mail.fullname" . }}-credential
-                  key: "admin-password"
-          volumeMounts:
-            - name: tls-secret
-              mountPath: /secrets/tls
-            - name: credential-secret
-              mountPath: /secrets/credential
-            - name: scripts
-              mountPath: /opt/scripts
-          resources:
-            limits:
-              memory: 128Mi
-              cpu: 100m
-        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -111,26 +101,28 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
-        - name: credential-secret
-          secret:
-            secretName: {{ include "stalwart-mail.fullname" . }}-credential
+        - name: config
+          configMap:
+            name: {{ include "stalwart.fullname" . }}-config
         {{- if .Values.tls.enabled }}
         - name: tls-secret
           secret:
             secretName: {{ .Values.tls.secretName | quote }}
-        - name: scripts
-          configMap:
-            name: {{ include "stalwart-mail.fullname" . }}-scripts
         {{- end }}
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+  {{- if .Values.persistence.enabled }}
   volumeClaimTemplates:
-  - metadata:
-      name: stalwart-volume
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      storageClassName: {{ .Values.persistence.storageClass }}
-      resources:
-        requests:
-          storage: {{ .Values.persistence.size }}
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode | quote }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size | quote }}
+  {{- end }}

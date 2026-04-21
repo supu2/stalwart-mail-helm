@@ -1,7 +1,7 @@
 # Stalwart Mail Helm Chart
 
 ```bash
-$ helm install stalwart-mail . -f your-values.yaml
+$ helm install stalwart . -f your-values.yaml
 ```
 
 ## Values:
@@ -26,8 +26,8 @@ persistence:
 ## Resources
 
 ```
-pod         stalwart-mail-0
-service     stalwart-mail          LoadBalancer 8080/TCP,443/TCP,25/TCP,587/TCP,465/TCP,143/TCP,993/TCP,4190/TCP
-service     stalwart-mail-headless ClusterIP    8080/TCP,443/TCP,25/TCP,587/TCP,465/TCP,143/TCP,993/TCP,4190/TCP
-statefulset stalwart-mail
+pod         stalwart-0
+service     stalwart          LoadBalancer 8080/TCP,443/TCP,25/TCP,587/TCP,465/TCP,143/TCP,993/TCP,4190/TCP
+service     stalwart-headless ClusterIP    8080/TCP,443/TCP,25/TCP,587/TCP,465/TCP,143/TCP,993/TCP,4190/TCP
+statefulset stalwart
 ```

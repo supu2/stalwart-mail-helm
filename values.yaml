@@ -20,6 +20,49 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# Maps to STALWART_ROLE. Names a ClusterRole defined in the database.
+# Leave empty on single-node installs to run every task and listener.
+# See /docs/cluster/configuration/roles for the role model.
+role: ""
+
+# Maps to STALWART_PUSH_SHARD. Only set on nodes whose role delivers
+# push notifications. Leave empty on single-node installs.
+pushShard: ""
+
+# Recovery / bootstrap administrator credential.
+# Enable this on first install so the operator can sign in without
+# scraping the pod logs for the generated temporary password.
+# Remove it once a permanent administrator account has been
+# provisioned through the setup wizard.
+recoveryAdmin:
+  enabled: true
+  username: admin
+  password: "change-me"
+
+# Starts the pods in recovery mode. Suspends mail services and
+# exposes only the management listener on the configured port.
+# See /docs/configuration/recovery-mode.
+recoveryMode:
+  enabled: false
+  port: 8080
+  logLevel: info
+
+# Extra environment variables injected into the container, for
+# store credentials that live in plain text.
+extraEnv: []
+
+# Extra environment variables injected from the managed Secret.
+# Use this for anything sensitive (database passwords, S3 keys, etc.).
+extraSecretEnv: {}
+
+# config.json contents. Rendered verbatim into the ConfigMap.
+# Only the DataStore object belongs here; every other setting lives
+# in the database once the server is bootstrapped.
+# See /docs/configuration/overview and /docs/ref/object/data-store.
+config:
+  "@type": RocksDb
+  path: /var/lib/stalwart
+
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
@@ -120,7 +163,6 @@ persistence:
   storageClass: ""
   accessMode: ReadWriteOnce
   size: 10Gi
-  mountPath: /opt/stalwart
 
 # -- Additional volumes
 volumes: []
@@ -130,6 +172,3 @@ volumeMounts: []
 tls:
   enabled: false
   secretName: stalwart-tls
-
-admin:
-  password: ""

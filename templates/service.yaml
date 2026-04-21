@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "stalwart-mail.fullname" . }}
+  name: {{ include "stalwart.fullname" . }}
   labels:
-    {{- include "stalwart-mail.labels" . | nindent 4 }}
+    {{- include "stalwart.labels" . | nindent 4 }}
   {{- with .Values.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -20,7 +20,7 @@ spec:
       targetPort: {{ $val }}
   {{- end }}
   selector:
-    {{- include "stalwart-mail.selectorLabels" . | nindent 4 }}
+    {{- include "stalwart.selectorLabels" . | nindent 4 }}
   {{- if .Values.service.externalIPs }}
   externalIPs: {{ .Values.service.externalIPs | toJson }}
   {{- end }}
@@ -33,9 +33,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "stalwart-mail.fullname" $ }}-{{ $i }}
+  name: {{ include "stalwart.fullname" $ }}-{{ $i }}
   labels:
-    {{- include "stalwart-mail.labels" $ | nindent 4 }}
+    {{- include "stalwart.labels" $ | nindent 4 }}
   {{- with $.Values.externalAccess.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -52,7 +52,7 @@ spec:
       targetPort: {{ $val }}
   {{- end }}
   selector:
-    {{- include "stalwart-mail.selectorLabels" $ | nindent 4 }}
-    statefulset.kubernetes.io/pod-name: {{ include "stalwart-mail.fullname" $ }}-{{ $i }}
+    {{- include "stalwart.selectorLabels" $ | nindent 4 }}
+    statefulset.kubernetes.io/pod-name: {{ include "stalwart.fullname" $ }}-{{ $i }}
 {{- end }}
 {{- end }}
