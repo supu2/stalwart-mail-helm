@@ -1,0 +1,126 @@
+{{- if .Values.webmail.enabled -}}
+{{- $fullName := printf "%s-webmail" (include "stalwart.fullname" .) }}
+{{- $dataDirs := dict "settings" "/app/data/settings" "admin" "/app/data/admin" "admin-state" "/app/data/admin-state" "telemetry" "/app/data/telemetry" }}
+
+{{- if .Values.webmail.persistence.enabled }}
+{{- range $name, $path := $dataDirs }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-{{ $name }}
+  labels:
+    {{- include "stalwart.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: webmail
+spec:
+  accessModes:
+    - {{ $.Values.webmail.persistence.accessMode | quote }}
+  {{- if $.Values.webmail.persistence.storageClass }}
+  storageClassName: {{ $.Values.webmail.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $.Values.webmail.persistence.size | quote }}
+---
+{{- end }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- include "stalwart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webmail
+spec:
+  replicas: {{ .Values.webmail.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "stalwart.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: webmail
+  template:
+    metadata:
+      labels:
+        {{- include "stalwart.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: webmail
+      {{- with .Values.webmail.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      containers:
+        - name: webmail
+          image: {{ include "stalwart.common.image" (dict "image" .Values.webmail.image "global" .Values.global "chart" nil) | quote }}
+          imagePullPolicy: {{ .Values.webmail.image.pullPolicy }}
+          env:
+            - name: HOSTNAME
+              value: {{ .Values.webmail.hostname | quote }}
+            - name: PORT
+              value: {{ .Values.webmail.port | quote }}
+            {{- with .Values.webmail.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          envFrom:
+            {{- toYaml .Values.webmail.envFrom | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          ports:
+            - name: http
+              containerPort: {{ .Values.webmail.port }}
+          volumeMounts:
+            {{- range $name, $path := $dataDirs }}
+            - name: {{ $name }}
+              mountPath: {{ $path }}
+              {{- if and (eq $name "admin") $.Values.webmail.adminReadOnly }}
+              readOnly: true
+              {{- end }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.webmail.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.webmail.persistence.enabled }}
+        {{- range $name, $path := $dataDirs }}
+        - name: {{ $name }}
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-{{ $name }}
+        {{- end }}
+        {{- else }}
+        {{- range $name, $path := $dataDirs }}
+        - name: {{ $name }}
+          emptyDir: {}
+        {{- end }}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- include "stalwart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webmail
+  {{- with .Values.webmail.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.webmail.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.webmail.port }}
+      targetPort: http
+  selector:
+    {{- include "stalwart.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: webmail
+{{- end }}

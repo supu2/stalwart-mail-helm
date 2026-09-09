@@ -172,3 +172,90 @@ volumeMounts: []
 tls:
   enabled: false
   secretName: stalwart-tls
+
+# Expose Stalwart's HTTP/management listener (service.ports.http) through an
+# existing Gateway API Gateway. The Gateway itself is managed out of band.
+httpRoute:
+  enabled: false
+  # parentRefs of the HTTPRoute: point at the Gateway to attach to.
+  parentRefs:
+    - name: gateway
+      # namespace: default   # omit when the Gateway is in this namespace
+      # sectionName: https   # optional: pin to one Gateway listener
+  # Hosts this route answers for. Empty = all hostnames on the listener(s).
+  hostnames: []
+  # e.g. hostnames:
+  #   - mail.example.com
+
+# ---------------------------------------------------------------------------
+# Optional Bulwark Webmail (JMAP webmail client for Stalwart)
+# Mirrors the upstream docker-compose service. See https://bulwarkmail.org/docs
+# ---------------------------------------------------------------------------
+webmail:
+  # Deploy the Bulwark webmail client (Deployment + Service + PVCs).
+  enabled: false
+
+  image:
+    repository: ghcr.io/bulwarkmail/webmail
+    pullPolicy: IfNotPresent
+    # Bulwark is versioned independently of this chart; :latest is the upstream
+    # compose default. Pin a tag for production.
+    tag: "latest"
+
+  # Keep at 1: Bulwark keeps state in local ReadWriteOnce PVCs.
+  replicaCount: 1
+
+  # Server listen address/port (HOSTNAME/PORT env). Use "::" for IPv6.
+  hostname: "0.0.0.0"
+  port: 3000
+
+  # Extra plain-text environment variables (compose `environment`).
+  extraEnv: []
+  # Equivalent of compose `env_file: .env.local`. Create the Secret from your
+  # local file and reference it here:
+  #   kubectl create secret generic bulwark-env --from-env-file=.env.local
+  #   webmail:
+  #     envFrom:
+  #       - secretRef:
+  #           name: bulwark-env
+  envFrom: []
+
+  service:
+    type: ClusterIP
+    annotations: {}
+
+  # The four compose named volumes (settings, admin, admin-state, telemetry)
+  # become PVCs <release>-webmail-<dir>, each mounted at its /app/data path.
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 1Gi
+
+  # After the first-launch setup wizard has written config.json/admin.json,
+  # lock the admin config dir read-only as the compose comments suggest.
+  adminReadOnly: false
+
+  # Expose webmail through an existing Gateway API Gateway (the Gateway itself
+  # is managed out of band and never created by this chart).
+  httpRoute:
+    enabled: false
+    # parentRefs of the HTTPRoute: point at the Gateway to attach to.
+    parentRefs:
+      - name: gateway
+        # namespace: default   # omit when the Gateway is in this namespace
+        # sectionName: https   # optional: pin to one Gateway listener
+    # Hosts this route answers for. Empty = all hostnames on the listener(s).
+    hostnames: []
+    # e.g. hostnames:
+    #   - webmail.example.com
+
+  podAnnotations: {}
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
