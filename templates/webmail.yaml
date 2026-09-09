@@ -6,6 +6,14 @@
 {{- if and (not $jmap) $httpRoute.enabled $httpRoute.hostnames }}
 {{-   $jmap = printf "https://%s" (first $httpRoute.hostnames) }}
 {{- end }}
+{{- $secretName := printf "%s-session" $fullName }}
+{{- $sessionSecret := .Values.webmail.sessionSecret }}
+{{- if not $sessionSecret }}
+{{-   $existing := lookup "v1" "Secret" .Release.Namespace $secretName }}
+{{-   if $existing }}
+{{-     $sessionSecret = index $existing.data "session-secret" | b64dec }}
+{{-   end }}
+{{- end }}
 
 {{- if .Values.webmail.persistence.enabled }}
 {{- range $name, $path := $dataDirs }}
@@ -28,6 +36,17 @@ spec:
 ---
 {{- end }}
 {{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName }}
+  labels:
+    {{- include "stalwart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webmail
+type: Opaque
+data:
+  session-secret: {{ ($sessionSecret | default (randAlphaNum 48)) | b64enc | quote }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -58,6 +77,11 @@ spec:
               value: {{ .Values.webmail.hostname | quote }}
             - name: PORT
               value: {{ .Values.webmail.port | quote }}
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: session-secret
             {{- if $jmap }}
             - name: JMAP_SERVER_URL
               value: {{ $jmap | quote }}

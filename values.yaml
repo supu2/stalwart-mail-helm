@@ -222,6 +222,12 @@ webmail:
   hostname: "0.0.0.0"
   port: 3000
 
+  # Secret used to sign Bulwark sessions (SESSION_SECRET). Empty = generated
+  # once and persisted in Secret <release>-webmail-session (stable across
+  # restarts/upgrades). Set a value to control it yourself; rotating it logs
+  # every session out.
+  sessionSecret: ""
+
   # Stalwart JMAP endpoint Bulwark users' browsers will reach (JMAP_SERVER_URL).
   # When empty and stalwart's httpRoute has hostnames, defaults to the first
   # one as https://<host>. When neither is set, Bulwark's setup wizard prompts
