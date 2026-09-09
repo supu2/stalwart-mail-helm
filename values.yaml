@@ -209,6 +209,16 @@ webmail:
   hostname: "0.0.0.0"
   port: 3000
 
+  # Stalwart JMAP endpoint Bulwark users' browsers will reach (JMAP_SERVER_URL).
+  # When empty and stalwart's httpRoute has hostnames, defaults to the first
+  # one as https://<host>. When neither is set, Bulwark's setup wizard prompts
+  # for it and persists the answer to config.json in the admin volume.
+  # Note: JMAP must also be enabled (with CORS set to the webmail origin) in
+  # Stalwart's own config, which lives in the Stalwart database and is outside
+  # this chart's scope - see bulwarkmail.org/docs/getting-started/configuration/
+  # stalwart-setup for those one-time steps.
+  jmapServerUrl: ""
+
   # Extra plain-text environment variables (compose `environment`).
   extraEnv: []
   # Equivalent of compose `env_file: .env.local`. Create the Secret from your

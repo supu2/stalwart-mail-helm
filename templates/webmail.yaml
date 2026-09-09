@@ -1,6 +1,11 @@
 {{- if .Values.webmail.enabled -}}
 {{- $fullName := printf "%s-webmail" (include "stalwart.fullname" .) }}
 {{- $dataDirs := dict "settings" "/app/data/settings" "admin" "/app/data/admin" "admin-state" "/app/data/admin-state" "telemetry" "/app/data/telemetry" }}
+{{- $jmap := .Values.webmail.jmapServerUrl }}
+{{- $httpRoute := default (dict "enabled" false "hostnames" (list)) .Values.httpRoute }}
+{{- if and (not $jmap) $httpRoute.enabled $httpRoute.hostnames }}
+{{-   $jmap = printf "https://%s" (first $httpRoute.hostnames) }}
+{{- end }}
 
 {{- if .Values.webmail.persistence.enabled }}
 {{- range $name, $path := $dataDirs }}
@@ -55,6 +60,10 @@ spec:
               value: {{ .Values.webmail.hostname | quote }}
             - name: PORT
               value: {{ .Values.webmail.port | quote }}
+            {{- if $jmap }}
+            - name: JMAP_SERVER_URL
+              value: {{ $jmap | quote }}
+            {{- end }}
             {{- with .Values.webmail.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
