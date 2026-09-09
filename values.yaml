@@ -51,6 +51,19 @@ recoveryMode:
 # store credentials that live in plain text.
 extraEnv: []
 
+# Additional Kubernetes manifests to deploy alongside the chart. Each entry is
+# rendered with Helm templating first, so .Release, .Values, .Chart etc. are
+# available inside. Useful for resources the chart does not model itself.
+extraObjects: []
+# e.g.
+# extraObjects:
+#   - apiVersion: v1
+#     kind: ConfigMap
+#     metadata:
+#       name: "{{ .Release.Name }}-extra"
+#     data:
+#       foo: bar
+
 # Extra environment variables injected from the managed Secret.
 # Use this for anything sensitive (database passwords, S3 keys, etc.).
 extraSecretEnv: {}
