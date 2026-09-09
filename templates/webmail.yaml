@@ -39,13 +39,11 @@ spec:
   replicas: {{ .Values.webmail.replicaCount }}
   selector:
     matchLabels:
-      {{- include "stalwart.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: webmail
+      {{- include "stalwart.webmail.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "stalwart.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: webmail
+        {{- include "stalwart.webmail.selectorLabels" . | nindent 8 }}
       {{- with .Values.webmail.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
@@ -130,6 +128,5 @@ spec:
       port: {{ .Values.webmail.port }}
       targetPort: http
   selector:
-    {{- include "stalwart.selectorLabels" . | nindent 4 }}
-    app.kubernetes.io/component: webmail
+    {{- include "stalwart.webmail.selectorLabels" . | nindent 4 }}
 {{- end }}

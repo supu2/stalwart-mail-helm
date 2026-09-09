@@ -51,6 +51,16 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
+Selector labels for the optional Bulwark webmail workload. Distinct from the
+stalwart selector labels so stalwart Services never match webmail pods (and
+vice versa).
+*/}}
+{{- define "stalwart.webmail.selectorLabels" -}}
+app.kubernetes.io/name: {{ printf "%s-webmail" (include "stalwart.name" .) }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{- define "stalwart.serviceAccountName" -}}
