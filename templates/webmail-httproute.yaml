@@ -18,4 +18,6 @@ spec:
     - backendRefs:
         - name: {{ $fullName }}
           port: {{ .Values.webmail.port }}
+      timeouts:
+        request: {{ .Values.webmail.httpRoute.requestTimeout | default "1800s" }}
 {{- end }}
