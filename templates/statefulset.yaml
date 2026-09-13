@@ -82,6 +82,10 @@ spec:
             {{- if .Values.tls.enabled }}
             - name: tls-secret
               mountPath: /secrets/tls
+            {{- range .Values.tls.extraSecrets }}
+            - name: {{ .name | quote }}
+              mountPath: {{ .mountPath | quote }}
+            {{- end }}
             {{- end }}
             {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
@@ -108,6 +112,11 @@ spec:
         - name: tls-secret
           secret:
             secretName: {{ .Values.tls.secretName | quote }}
+        {{- range .Values.tls.extraSecrets }}
+        - name: {{ .name | quote }}
+          secret:
+            secretName: {{ .secretName | quote }}
+        {{- end }}
         {{- end }}
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}

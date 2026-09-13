@@ -23,6 +23,35 @@ persistence:
   mountPath: /opt/stalwart
 ```
 
+## TLS
+
+One certificate, mounted at `/secrets/tls`:
+
+```yaml
+tls:
+  enabled: true
+  secretName: tls-incloudy-com-tr
+```
+
+Several certificates, one per domain, each mounted at its own path. Point the
+Stalwart certificate config at the respective `tls.crt` / `tls.key`:
+
+```yaml
+tls:
+  enabled: true
+  secretName: tls-incloudy-com-tr      # mounted at /secrets/tls
+  extraSecrets:
+    - name: tls-ngu                     # volume name, must be unique
+      secretName: tls-ngu-com-tr
+      mountPath: /secrets/tls-ngu       # -> /secrets/tls-ngu/tls.crt|tls.key
+    - name: tls-pottie
+      secretName: tls-pottie-io
+      mountPath: /secrets/tls-pottie
+```
+
+Every secret must be of type `kubernetes.io/tls`. Toggling `tls.enabled` or
+changing `extraSecrets` requires a pod restart to pick up the new mounts.
+
 ## Resources
 
 ```

@@ -184,7 +184,18 @@ volumeMounts: []
 
 tls:
   enabled: false
+  # Secret holding the default certificate, mounted at /secrets/tls.
+  # Must be a kubernetes.io/tls secret (keys: tls.crt, tls.key).
   secretName: stalwart-tls
+  # Additional TLS secrets, each mounted at its own path. Use this when the
+  # server serves several domains with separate certificates. Every entry
+  # needs a unique name (used as the volume name), a secretName, and the
+  # mountPath to mount it at.
+  #   extraSecrets:
+  #     - name: tls-ngu
+  #       secretName: tls-ngu-com-tr
+  #       mountPath: /secrets/tls-ngu
+  extraSecrets: []
 
 # Expose Stalwart's HTTP/management listener (service.ports.http) through an
 # existing Gateway API Gateway. The Gateway itself is managed out of band.
