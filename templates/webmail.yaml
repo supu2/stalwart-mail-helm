@@ -45,7 +45,12 @@ metadata:
     app.kubernetes.io/component: webmail
 type: Opaque
 data:
-  session-secret: {{ ($sessionSecret | default (randAlphaNum 48)) | b64enc | quote }}
+  # retrieve the secret data using lookup function and when not exists, return an empty dictionary / map as result
+  {{- $secretObj := (lookup "v1" "Secret" .Release.Namespace $secretName) | default dict }}
+  {{- $secretData := (get $secretObj "data") | default dict }}
+  # set $jwtSecret to existing secret data or generate a random one when not exists
+  {{- $sessionSecret := (get $secretData "jwt-secret") | default (randAlphaNum 48 | b64enc) }}
+  session-secret: {{ $sessionSecret | quote }}
 ---
 apiVersion: apps/v1
 kind: Deployment
