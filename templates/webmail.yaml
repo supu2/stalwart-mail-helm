@@ -8,7 +8,7 @@
 {{- end }}
 {{- $secretName := printf "%s-session" $fullName }}
 {{- $sessionSecret := .Values.webmail.sessionSecret }}
-{{- if not $sessionSecret }}
+{{- if and (not $sessionSecret) .Values.webmail.createSessionSecret }}
 {{-   $existing := lookup "v1" "Secret" .Release.Namespace $secretName }}
 {{-   if $existing }}
 {{-     $sessionSecret = index $existing.data "session-secret" | b64dec }}
@@ -36,6 +36,7 @@ spec:
 ---
 {{- end }}
 {{- end }}
+{{- if or $sessionSecret .Values.webmail.createSessionSecret }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -45,13 +46,9 @@ metadata:
     app.kubernetes.io/component: webmail
 type: Opaque
 data:
-  # retrieve the secret data using lookup function and when not exists, return an empty dictionary / map as result
-  {{- $secretObj := (lookup "v1" "Secret" .Release.Namespace $secretName) | default dict }}
-  {{- $secretData := (get $secretObj "data") | default dict }}
-  # set $jwtSecret to existing secret data or generate a random one when not exists
-  {{- $sessionSecret := (get $secretData "jwt-secret") | default (randAlphaNum 48 | b64enc) }}
-  session-secret: {{ $sessionSecret | quote }}
+  session-secret: {{ ($sessionSecret | default (randAlphaNum 48)) | b64enc | quote }}
 ---
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
